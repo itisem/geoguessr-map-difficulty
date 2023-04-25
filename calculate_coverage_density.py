@@ -144,8 +144,8 @@ class ScoreCalculator:
 					weight = (10 / (10 + distance))
 					score = self.tile_score(tile)
 					scores.append({
-						"score":  score * weight,
-						"weight": weight
+						"score":  score * (weight ** 2),
+						"weight": weight ** 2
 					})
 		# to ensure that having nearby sea doesn't mess with the data, remove the 2/3 lowest-scoring tiles
 		scores.sort(key = lambda x: x["score"], reverse = True)
