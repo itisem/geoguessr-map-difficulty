@@ -166,7 +166,8 @@ if __name__ == "__main__":
 		(lat, lng) = location
 		score = score_calculator.coordinate_score({"lat": lat, "lng": lng})
 		cur.execute("UPDATE rounds SET streetview_coverage = ? WHERE lat = ? AND lng = ?", (score, lat, lng))
-		con.commit()
+		if calculated_count % 10000 == 0:
+			con.commit()
 		print(
 			f"Calculated {calculated_count} scores out of {location_count}",
 			sep = "",
