@@ -14,6 +14,7 @@ async def coverage_count(session, location, radius = 10):
 	# only one field == error
 	if(len(contents) <= 1):
 		count = 0
+		date_range = None
 	else:
 		# [1][5][0][8] contains the linked dates
 		try:
@@ -25,15 +26,23 @@ async def coverage_count(session, location, radius = 10):
 				linked_details = [{"date": x[1], "pano": linked_panos[x[0]][0][1]} for x in linked_dates]
 				linked_details = [x for x in linked_details if len(x["pano"]) == 22]
 				count = 1 + len(linked_details)
+				all_dates = [date_score(x["date"]) for x in linked_details]
+				all_dates.append(date_score(contents[1][6][7]))
+				date_range = max(all_dates) - min(all_dates)
 			else:
 				count = 1
+				date_range = 0
 		except:
 			# it will fail iff linked_dates is undefined, in which case the total number of panos is 1
 			count = 1
-	return {"lat": location["lat"], "lng": location["lng"], "count": count}
+			date_range = 0
+	return {"lat": location["lat"], "lng": location["lng"], "count": count, "date_range": date_range}
+
+# gets the number of months since 0 for a date
+date_score = lambda date: date[0] * 12 + date[1]
 
 # counts the number of locations in a list of locations
-async def coverage_count_chunk(session, locations, radius = 10):
+async def coverage_count_chunk(session, locations, radius = 20):
 	tasks = []
 	for location in locations:
 		tasks.append(coverage_count(session, location))
@@ -46,10 +55,10 @@ def chunk(locations, chunk_size = 500):
 		yield locations[i : i + chunk_size]
 
 # gets coverage counts for all locations
-async def get_all_coverage(chunk_size = 500, radius = 10):
+async def get_all_coverage(chunk_size = 500, radius = 20):
 	con = sqlite3.connect("data.db")
 	cur = con.cursor()
-	cur.execute("SELECT lat, lng FROM rounds WHERE coverage_dates IS NULL GROUP BY lat, lng")
+	cur.execute("SELECT lat, lng FROM rounds WHERE date_range IS NULL GROUP BY lat, lng")
 	coords = cur.fetchall()
 	coords = [{"lat": x[0], "lng": x[1]} for x in coords]
 	total_coords = len(coords)
@@ -59,7 +68,10 @@ async def get_all_coverage(chunk_size = 500, radius = 10):
 			i += chunk_size
 			results = await coverage_count_chunk(session, locations, radius)
 			for result in results:
-				cur.execute("UPDATE rounds SET coverage_dates = ? WHERE lat = ? AND lng = ?", (result["count"], result["lat"], result["lng"]))
+				cur.execute(
+					"UPDATE rounds SET coverage_dates = ?, date_range = ? WHERE lat = ? AND lng = ?",
+					(result["count"], result["date_range"], result["lat"], result["lng"])
+				)
 			con.commit()
 			print(
 			f"Got counts for {i} out of {total_coords}",
