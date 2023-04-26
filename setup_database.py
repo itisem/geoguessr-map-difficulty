@@ -48,7 +48,9 @@ cur.execute("""CREATE TABLE IF NOT EXISTS rounds(
 	team2_distance REAL,
 	team2_score INTEGER,
 	nearby_intersections INTEGER,
-	streetview_coverage INTEGER
+	streetview_coverage INTEGER,
+	coverage_dates INTEGER,
+	date_range INTEGER
 )""")
 cur.execute("CREATE INDEX round_in_game ON rounds(game_id, round_id)")
 cur.execute("CREATE INDEX round_coordinates ON rounds(lat, lng)")
